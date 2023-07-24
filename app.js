@@ -20,5 +20,7 @@ if (process.env.NODE_ENV === "development") {
 app.use("/sbc-fcm-api/v1/tokens", tokensRoutes);
 app.use("/sbc-fcm-api/v1/messages", messagesRoutes);
 app.use("/sbc-fcm-api/v1/subscriptions", subscriptionRoutes);
+// TODO
+// app.use("/sbc-fcm-api/v1/topics", topicsRoutes);
 
 module.exports = app;

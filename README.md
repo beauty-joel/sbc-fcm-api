@@ -1,6 +1,6 @@
 # Description
 
-This is an implementation of Firestore Cloud Messaging server. It allows to send messages to android/ios devices using differerent strategies. It uses a Firestore database to persit data.
+This is an implementation of Firebase Cloud Messaging server. It allows to send messages to android/ios devices using differerent strategies. It uses a Firestore database to persit data.
 
 # Project Structure
 
@@ -157,4 +157,10 @@ Ran all test suites.
 
 <br>
 
-<aside>💡 These tests are targeting the controllers. For the moment, there are no integration tests at the API endpoint level.</aside>
+<aside>💡 These tests are targeting the controllers. For the moment, there are no integration tests at the API endpoint level.
+<br>
+<br>
+
+💡 Integration tests at endpoint level are pending.
+
+</aside>
