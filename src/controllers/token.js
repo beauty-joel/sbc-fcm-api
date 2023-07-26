@@ -89,7 +89,3 @@ exports.deleteToken = async (req, res) => {
     res.status(204).json();
   }
 };
-
-// TODO Test invalid token
-// TODO Test partial input
-//

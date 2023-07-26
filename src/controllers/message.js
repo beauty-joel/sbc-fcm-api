@@ -19,7 +19,7 @@ exports.sendToMultipleAccounts = async (req, res) => {
     const deviceTokenDoc = await deviceTokensRef.get();
 
     if (!deviceTokenDoc.exists) {
-      res.status(501).json({
+      res.status(500).json({
         status: "fail",
         message: `Account '${accounts[i]}' not found!`,
       });
@@ -35,7 +35,7 @@ exports.sendToMultipleAccounts = async (req, res) => {
   const batchResponse = await getMessaging().sendEachForMulticast(message);
 
   if (batchResponse.failureCount.successCount == 0) {
-    res.status(501).json({
+    res.status(500).json({
       status: "fail",
       message: "Failed to send all messages",
     });
@@ -46,7 +46,7 @@ exports.sendToMultipleAccounts = async (req, res) => {
         failedTokens.push(tokens[idx]);
       }
     });
-    res.status(501).json({
+    res.status(500).json({
       status: "fail",
       message: "Failed to send message to some tokens",
       data: {
@@ -66,7 +66,7 @@ exports.sendToSingleAccount = async (req, res) => {
   const deviceTokensRef = db.collection("deviceTokens").doc(email);
   const docSnapshot = await deviceTokensRef.get();
   if (!docSnapshot.exists) {
-    res.status(501).json({
+    res.status(500).json({
       status: "fail",
       message: `Account ${email} not found!`,
     });
@@ -82,7 +82,7 @@ exports.sendToSingleAccount = async (req, res) => {
   };
   const batchResponse = await getMessaging().sendEachForMulticast(message);
   if (batchResponse.failureCount.successCount == 0) {
-    res.status(501).json({
+    res.status(500).json({
       status: "fail",
       message: "Failed to send all messages",
     });
@@ -93,7 +93,7 @@ exports.sendToSingleAccount = async (req, res) => {
         failedTokens.push(deviceTokens[idx]);
       }
     });
-    res.status(501).json({
+    res.status(500).json({
       status: "fail",
       message: "Failed to send message to some tokens",
       data: {
@@ -120,8 +120,7 @@ exports.sendToTopic = async (req, res) => {
   };
 
   try {
-    const response = await getMessaging().send(message);
-    console.log(response);
+    await getMessaging().send(message);
     res.status(200).json({
       status: "success",
       message: `Successfully sent message to topic: ${topic}`,
