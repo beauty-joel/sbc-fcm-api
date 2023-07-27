@@ -122,14 +122,57 @@ describe("when calling the message controller", () => {
   });
 
   it("should send a message to multiple accounts", async () => {
+    const testAccountsEmails = testAccounts.map((account) => account.email);
+
     req = {
       body: {
-        accounts: ["test1@email.com", "test2@email.com", "test3@email.com"],
+        accounts: testAccountsEmails,
         title: "This is a message to multple accounts",
         body: "Message body",
       },
     };
     await MessageController.sendToMultipleAccounts(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
+  });
+});
+
+describe("when calling the message controller with missing fields", () => {
+  const mockResponse = () => {
+    const res = {};
+    res.status = jest.fn().mockReturnValue(res);
+    res.json = jest.fn().mockReturnValue(res);
+    return res;
+  };
+
+  beforeEach(() => {
+    res = mockResponse();
+    req = {
+      body: {},
+    };
+  });
+
+  it("should return an error for the Multiple Account endpoint", async () => {
+    await MessageController.sendToMultipleAccounts(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  it("should return an error for the Single Account endpoint", async () => {
+    await MessageController.sendToSingleAccount(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  it("should return an error for the Topic endpoint", async () => {
+    await MessageController.sendToTopic(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  it("should return an error for the Message Batch endpoint", async () => {
+    await MessageController.sendBatch(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  it("should return an error for the Single Device", async () => {
+    await MessageController.sentToSingleDevice(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
   });
 });

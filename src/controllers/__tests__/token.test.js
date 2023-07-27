@@ -55,4 +55,16 @@ describe("when calling the token controller", () => {
       status: "fail",
     });
   });
+
+  it("should return an error if token is not provided", async () => {
+    req = {
+      body: {},
+    };
+    await TokenController.deleteToken(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      status: "fail",
+      message: "A token must be provided",
+    });
+  });
 });

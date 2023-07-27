@@ -75,4 +75,16 @@ describe("when calling the subscritpion controller", () => {
       status: "fail",
     });
   });
+
+  it("should return an error if missing fields", async () => {
+    req = {
+      body: {},
+    };
+    await SubscriptionController.subscribeToTopic(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      status: "fail",
+      message: `Email and topic should be provided!`,
+    });
+  });
 });
