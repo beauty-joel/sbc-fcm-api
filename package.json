@@ -5,7 +5,10 @@
   "main": "index.js",
   "scripts": {
     "test": "cross-env NODE_ENV=test jest --testTimeout=10000 --detectOpenHandles --runInBand",
-    "dev": "NODE_ENV=development nodemon server.js"
+    "dev": "cross-env NODE_ENV=development nodemon server.js",
+    "start": "node server.js",
+    "build": "docker build . -t beautyjoel/push-notification-service:dev"
+
   },
   "author": "",
   "license": "ISC",

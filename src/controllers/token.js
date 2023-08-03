@@ -30,6 +30,7 @@ const saveTokenDetails = async (email, token, deviceType) => {
       createdAt: Timestamp.now(),
       deviceType,
       email,
+      topics: [],
     };
     await db.collection("tokenDetails").doc(token).set(data);
   } catch (error) {

@@ -1,6 +1,5 @@
 const cors = require("cors");
 const express = require("express");
-const morgan = require("morgan");
 
 const tokensRoutes = require("./src/routes/tokens");
 const messagesRoutes = require("./src/routes/messages");
@@ -13,6 +12,7 @@ app.use(express.json());
 
 // Development logging
 if (process.env.NODE_ENV === "development") {
+  const morgan = require("morgan");
   app.use(morgan("dev"));
 }
 

@@ -56,10 +56,10 @@ http:127.0.0.1:8000/sbc-fcm-api/v1/subscriptions *
 
 http:127.0.0.1:8000/sbc-fcm-api/v1/tokens *
 
-http:127.0.0.1:8000/sbc-fcm-api/v1/message/native/single *
-http:127.0.0.1:8000/sbc-fcm-api/v1/message/native/group *
-http:127.0.0.1:8000/sbc-fcm-api/v1/message/native/batch *
-http:127.0.0.1:8000/sbc-fcm-api/v1/message/native/topic *
+http:127.0.0.1:8000/sbc-fcm-api/v1/messages/native/single *
+http:127.0.0.1:8000/sbc-fcm-api/v1/messages/native/group *
+http:127.0.0.1:8000/sbc-fcm-api/v1/messages/native/batch *
+http:127.0.0.1:8000/sbc-fcm-api/v1/messages/native/topic *
 ```
 
 <br>
@@ -128,6 +128,13 @@ http:127.0.0.1:8000/sbc-fcm-api/v1/topics
 | DELETE | Delete a topic | Yes | 204 |
 <br>
 
+http:127.0.0.1:8000/sbc-fcm-api/v1/tokens
+| Method | Action | TOKEN AUTH | STATUS CODE |
+| --- | --- | --- | --- |
+| POST | Saves device token | Yes | 201 |
+| DELETE | Deletes device token | Yes | 204 |
+<br>
+
 # Testing
 
 There are a total of 9 tests to ensure that each API endpoint and each of its allowed HTTP methods work properly.
@@ -164,3 +171,50 @@ Ran all test suites.
 💡 Integration tests at endpoint level are pending.
 
 </aside>
+
+## When subscribing to topic
+
+ 1. Validar los parametros del request
+ 2. Validar la existencia del documento 'deviceTokens' con el email solicitado
+ 3. Subscribir al topic
+ 4. Agregar el topic al documento 'tokenDetails'
+ 5. Crear o Actualizar el documento 'topicDetails' para el conteo de subscriptores y detalles
+
+
+ ## Documentos de la base de datos
+
+ accounts: [
+    email: {
+        tokens: []
+    }
+ ]
+
+ tokens: [
+    token: {
+        createdAt: timeStamp,
+        deviceType: android/ios
+        account: test@email.com
+        topics: [topic1, topic2]
+    }
+ ]
+
+ topics: [
+    topic: {
+        noSubscriptors: 10
+        createdAt: timeStamp,
+        updatedAt: timeStamp,
+        status: true/false
+    }
+ ]
+
+
+ ## TODOS
+
+    - Change email logic 
+    - When register a new device token check if other tokens are already subscribed to a topic
+
+# Notes
+  - If we want to keep the API 'agnostic' we should perstist info about which app is sending the request.
+
+  - What's going to append if the user changes his email in only one app
+  - 
