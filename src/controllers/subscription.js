@@ -1,4 +1,5 @@
 const { getMessaging } = require("firebase-admin/messaging");
+
 const {
   getFirestore,
   Timestamp,
@@ -8,17 +9,81 @@ const {
 const db = getFirestore();
 
 async function checkIfDocumentExists(collection, document) {
-  const doc = await db.collection(collection).doc(document).get();
-  return doc.exists;
+  try {
+    const doc = await db.collection(collection).doc(document).get();
+    return doc.exists;
+  } catch (error) {
+    console.log(error);
+  }
 }
 
-async function getDocument(collection, document) {
-  return await db.collection(collection).doc(document).get();
+async function checkIfSubscribed(email, topic) {
+  const tokensRef = db.collection("tokenDetails");
+  const query = tokensRef
+    .where("email", "==", email)
+    .where("topics", "array-contains", topic);
+  const snapshot = await query.count().get();
+  if (snapshot.data().count > 0) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+async function registerTopic(topic, source) {
+  const topicReference = db.collection("topics").doc(topic);
+  const topicDocument = await topicReference.get();
+  const topicExists = topicDocument.exists;
+
+  if (!topicExists) {
+    const data = {
+      createdAt: Timestamp.now(),
+      lastUsedAt: Timestamp.now(),
+      timesCalled: 0,
+      noSubscriptors: 1,
+      active: true,
+      source: source,
+    };
+
+    // Add a new document in collection "topics" with ID 'topicName'
+    await topicReference.set(data);
+  } else {
+    const topicData = topicDocument.data();
+    // Update number of subscriptors
+    await topicReference.update({
+      noSubscriptors: topicData.noSubscriptors + 1,
+    });
+  }
+}
+
+function addTopicToTokenDetails(deviceTokens, topic) {
+  deviceTokens.forEach(async (token) => {
+    const tokenRef = db.collection("tokenDetails").doc(token);
+    await tokenRef.update({
+      topics: FieldValue.arrayUnion(topic),
+    });
+  });
+}
+
+function removeTopicFromTokenDetails(deviceTokens, topic) {
+  deviceTokens.forEach(async (token) => {
+    const tokenRef = db.collection("tokenDetails").doc(token);
+    await tokenRef.update({
+      topics: FieldValue.arrayRemove(topic),
+    });
+  });
+}
+
+async function getDocumentData(collection, document) {
+  const documentReference = db.collection(collection).doc(document);
+  const documentSnapshot = await documentReference.get();
+  return documentSnapshot.data();
 }
 
 exports.subscribeToTopic = async (req, res) => {
   const { email, topic, source } = req.body;
 
+  // TODO Refactor request validation to a middleware
   // 1) Check request body payload
   if (!email || !topic) {
     res.status(400).json({
@@ -28,10 +93,8 @@ exports.subscribeToTopic = async (req, res) => {
   }
 
   // 2) Check if account document exists
-  const deviceTokensRef = db.collection("deviceTokens").doc(email);
-  const docSnapshot = await deviceTokensRef.get();
-
-  if (!docSnapshot.exists) {
+  const accountExists = checkIfDocumentExists("deviceTokens", email);
+  if (!accountExists) {
     res.status(404).json({
       status: "fail",
       message: `Account ${email} not found.`,
@@ -39,50 +102,22 @@ exports.subscribeToTopic = async (req, res) => {
   }
 
   // 3) Check if account is already subscribed to the topic
-  const tokensRef = db.collection("tokenDetails");
-  const query = tokensRef
-    .where("email", "==", email)
-    .where("topics", "array-contains", topic);
+  const isSubscribed = await checkIfSubscribed(email, topic);
 
-  const snapshot = await query.count().get();
-  console.log(snapshot.data());
-  if (snapshot.data().count > 0) {
+  if (isSubscribed) {
     res.status(404).json({
       status: "fail",
       message: `Account ${email} is already subscribre to the topic: ${topic}.`,
     });
-  } else {
-    const { deviceTokens } = docSnapshot.data();
+  }
+  // 4) Subscribe to topic
+  else {
+    const { deviceTokens } = await getDocumentData("deviceTokens", email);
     try {
+      // Actual subscription to topic in Firebase Cloud Messaging
       await getMessaging().subscribeToTopic(deviceTokens, topic);
-
-      // Register/Create Topic into Topics Colllection
-      const topicExists = await checkIfDocumentExists("topics", topic);
-      console.log(topicExists);
-
-      if (topicExists) {
-        const topicRef = db.collection("topics").doc(topic);
-        const snapshot = await topicRef.get();
-        console.log(snapshot.data());
-        const topicData = snapshot.data();
-
-        // Update number of subscriptors
-        await topicRef.update({
-          noSubscriptors: topicData.noSubscriptors + 1,
-        });
-      } else {
-        const data = {
-          createdAt: Timestamp.now(),
-          lastUsedAt: Timestamp.now(),
-          timesCalled: 0,
-          noSubscriptors: 1,
-          active: true,
-          source: source,
-        };
-
-        // Add a new document in collection "topics" with ID 'topicName'
-        await db.collection("topics").doc(topic).set(data);
-      }
+      // Register or Create Topic to Topics Colllection
+      await registerTopic(topic, source);
     } catch (error) {
       res.status(501).json({
         status: "fail",
@@ -90,12 +125,7 @@ exports.subscribeToTopic = async (req, res) => {
       });
     }
     // Update tokens topic list
-    deviceTokens.forEach(async (token) => {
-      const tokenRef = db.collection("tokenDetails").doc(token);
-      await tokenRef.update({
-        topics: FieldValue.arrayUnion(topic),
-      });
-    });
+    addTopicToTokenDetails(deviceTokens, topic);
 
     res.status(200).json({
       status: "success",
@@ -103,19 +133,23 @@ exports.subscribeToTopic = async (req, res) => {
     });
   }
 };
-exports.unsubscribeFromTopic = async (req, res) => {
-  const { email, topic } = req.body;
-  const deviceTokensRef = db.collection("deviceTokens").doc(email);
-  const docSnapshot = await deviceTokensRef.get();
 
-  if (docSnapshot.exists) {
-    const { deviceTokens } = docSnapshot.data();
-    console.log(deviceTokens);
+exports.unsubscribeFromTopic = async (req, res) => {
+  const { email, topic, source } = req.body;
+
+  const accountExists = await checkIfDocumentExists("deviceTokens", email);
+  const topicExists = await checkIfDocumentExists("topics", topic);
+
+  // TODO add validation for already unsubscribed
+
+  if (accountExists && topicExists) {
+    const { deviceTokens } = await getDocumentData("deviceTokens", email);
     try {
       const response = await getMessaging().unsubscribeFromTopic(
         deviceTokens,
         topic
       );
+      removeTopicFromTokenDetails(deviceTokens, topic);
       res.status(200).json({
         status: "success",
         message: `Successfully unsubscribed from topic:', ${response}`,
@@ -129,7 +163,7 @@ exports.unsubscribeFromTopic = async (req, res) => {
   } else {
     res.status(404).json({
       status: "fail",
-      message: `Account not found:', ${email}`,
+      message: "Account or topic not found:",
     });
   }
 };

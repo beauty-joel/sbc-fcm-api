@@ -4,19 +4,21 @@ const {
   FieldValue,
 } = require("firebase-admin/firestore");
 
+const { checkIfDocumentExists, getDocumentData } = require("./utils");
+
 const db = getFirestore();
 
-const saveDeviceTokens = async (email, token) => {
+const saveDeviceTokens = async (email, token, source) => {
   try {
     const deviceTokensRef = db.collection("deviceTokens").doc(email);
     const deviceTokensDoc = await deviceTokensRef.get();
-
+    const fieldName = `${source}Tokens`;
     if (deviceTokensDoc.exists) {
       await deviceTokensRef.update({
-        deviceTokens: FieldValue.arrayUnion(token),
+        [fieldName]: FieldValue.arrayUnion(token),
       });
     } else {
-      await deviceTokensRef.set({ deviceTokens: [token] });
+      await deviceTokensRef.set({ [fieldName]: [token] });
     }
     return "Device token saved!";
   } catch (error) {
@@ -24,14 +26,16 @@ const saveDeviceTokens = async (email, token) => {
   }
 };
 
-const saveTokenDetails = async (email, token, deviceType) => {
+const saveTokenDetails = async (email, token, deviceType, source) => {
   try {
     const data = {
       createdAt: Timestamp.now(),
       deviceType,
       email,
       topics: [],
+      source,
     };
+
     await db.collection("tokenDetails").doc(token).set(data);
   } catch (error) {
     throw new Error(error.details);
@@ -39,36 +43,55 @@ const saveTokenDetails = async (email, token, deviceType) => {
 };
 
 exports.saveToken = async (req, res) => {
-  const { email, token, deviceType } = req.body;
+  const { email, token, deviceType, source } = req.body;
 
-  if (email && token && deviceType) {
-    await saveDeviceTokens(email, token);
-    await saveTokenDetails(email, token, deviceType);
-    res.status(200).json({
-      status: "success",
-      message: "Token successfully saved",
-    });
-  } else {
+  if (!email && !token && !deviceType && !source) {
     res.status(400).json({
       status: "fail",
       message: "Missing fields",
     });
+  } else {
+    // Test if token already exists
+    const tokenExists = await checkIfDocumentExists("tokenDetails", token);
+    console.log(tokenExists);
+    if (tokenExists) {
+      res.status(400).json({
+        status: "fail",
+        message: "Token already exists",
+      });
+    } else {
+      // Save
+      await saveDeviceTokens(email, token, source);
+      await saveTokenDetails(email, token, deviceType, source);
+      res.status(200).json({
+        status: "success",
+        message: "Token successfully saved",
+      });
+    }
   }
 };
 
 exports.deleteToken = async (req, res) => {
-  const { token } = req.body;
+  const { token, source } = req.body;
 
-  if (token) {
-    const tokenDetailsRef = db.collection("tokenDetails").doc(token);
-    const doc = await tokenDetailsRef.get();
-    if (!doc.exists) {
+  if (token && source) {
+    const tokenExists = await checkIfDocumentExists("tokenDetails", token);
+    if (!tokenExists) {
       res.status(404).json({
         status: "fail",
         message: `Token '${token}' not found!`,
       });
     } else {
-      const { email } = doc.data();
+      const sourceField = `${source}Tokens`;
+      const tokenDetails = await getDocumentData("tokenDetails", token);
+      const { email } = tokenDetails;
+      // Check if the token is unique for the account
+      tokenReference = db.collection("deviceTokens");
+      query = tokenReference.where("appTokens", "array-contains", token);
+      snapshot = await query.count().get();
+
+      console.log(snapshot.data().count);
+
       const deviceTokensRef = db.collection("deviceTokens").doc(email);
       const deviceTokensDoc = await deviceTokensRef.get();
       const { deviceTokens } = deviceTokensDoc.data();
@@ -87,7 +110,7 @@ exports.deleteToken = async (req, res) => {
   } else {
     res.status(400).json({
       status: "fail",
-      message: "A token must be provided",
+      message: "A token and source must be provided",
     });
   }
 };
