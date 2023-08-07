@@ -3,6 +3,7 @@ const {
   Timestamp,
   FieldValue,
 } = require("firebase-admin/firestore");
+const { getMessaging } = require("firebase-admin/messaging");
 
 const { checkIfDocumentExists, getDocumentData } = require("./utils");
 
@@ -75,6 +76,7 @@ exports.deleteToken = async (req, res) => {
   const { token, source } = req.body;
 
   if (token && source) {
+    // Check if token exists
     const tokenExists = await checkIfDocumentExists("tokenDetails", token);
     if (!tokenExists) {
       res.status(404).json({
@@ -83,27 +85,49 @@ exports.deleteToken = async (req, res) => {
       });
     } else {
       const sourceField = `${source}Tokens`;
+
+      // Get the email associated with the token
       const tokenDetails = await getDocumentData("tokenDetails", token);
       const { email } = tokenDetails;
-      // Check if the token is unique for the account
-      tokenReference = db.collection("deviceTokens");
-      query = tokenReference.where("appTokens", "array-contains", token);
-      snapshot = await query.count().get();
 
-      console.log(snapshot.data().count);
-
+      // Get all the tokens assciated with the email
       const deviceTokensRef = db.collection("deviceTokens").doc(email);
       const deviceTokensDoc = await deviceTokensRef.get();
-      const { deviceTokens } = deviceTokensDoc.data();
-      // If the account has only one token remove the account,
-      // otherwise just update the token list and keep the account.
-      if (deviceTokens.length === 1) {
+      const { [sourceField]: tokens, ...theRest } = deviceTokensDoc.data();
+
+      // If there is only one token...
+      if (tokens.length == 1) {
+        // Get token subscriptions
+        const ref = db.collection("tokenDetails").doc(token);
+        const doc = await ref.get();
+        const { topics } = (await doc).data();
+        console.log(topics);
+        // If tokens subscriptions...
+        if (topics.length > 0) {
+          topics.forEach(async (topic) => {
+            // Unsubscribe from Firebase Cloud Messaging Topic
+            await getMessaging().unsubscribeFromTopic(token, topic);
+
+            // Update topic subscribers count
+            const topicReference = db.collection("topics").doc(topic);
+            const topicDocument = await topicReference.get();
+            const topicData = topicDocument.data();
+            await topicReference.update({
+              noSubscriptors: topicData.noSubscriptors - 1,
+            });
+          });
+        }
+
+        // Delete associated "deviceTokens" dcoument.
         await db.collection("deviceTokens").doc(email).delete();
       } else {
+        // Update token list
         await deviceTokensRef.update({
-          deviceTokens: FieldValue.arrayRemove(token),
+          [sourceField]: FieldValue.arrayRemove(token),
         });
       }
+
+      // Delete "tokenDetails" document
       await db.collection("tokenDetails").doc(token).delete();
       res.status(204).json();
     }

@@ -82,13 +82,13 @@ async function getDocumentData(collection, document) {
 
 exports.subscribeToTopic = async (req, res) => {
   const { email, topic, source } = req.body;
-
+  const sourceField = `${source}Tokens`;
   // TODO Refactor request validation to a middleware
   // 1) Check request body payload
-  if (!email || !topic) {
+  if (!email || !topic || !source) {
     res.status(400).json({
       status: "fail",
-      message: "Email and topic should be provided!",
+      message: "Email, topic and source should be provided!",
     });
   }
 
@@ -112,10 +112,12 @@ exports.subscribeToTopic = async (req, res) => {
   }
   // 4) Subscribe to topic
   else {
-    const { deviceTokens } = await getDocumentData("deviceTokens", email);
+    const deviceTokensRef = db.collection("deviceTokens").doc(email);
+    const deviceTokensDoc = await deviceTokensRef.get();
+    const { [sourceField]: tokens, ...theRest } = deviceTokensDoc.data();
     try {
       // Actual subscription to topic in Firebase Cloud Messaging
-      await getMessaging().subscribeToTopic(deviceTokens, topic);
+      await getMessaging().subscribeToTopic(tokens, topic);
       // Register or Create Topic to Topics Colllection
       await registerTopic(topic, source);
     } catch (error) {
@@ -125,7 +127,7 @@ exports.subscribeToTopic = async (req, res) => {
       });
     }
     // Update tokens topic list
-    addTopicToTokenDetails(deviceTokens, topic);
+    addTopicToTokenDetails(tokens, topic);
 
     res.status(200).json({
       status: "success",
@@ -137,22 +139,23 @@ exports.subscribeToTopic = async (req, res) => {
 exports.unsubscribeFromTopic = async (req, res) => {
   const { email, topic, source } = req.body;
 
+  const sourceField = `${source}Tokens`;
+
   const accountExists = await checkIfDocumentExists("deviceTokens", email);
   const topicExists = await checkIfDocumentExists("topics", topic);
 
   // TODO add validation for already unsubscribed
 
   if (accountExists && topicExists) {
-    const { deviceTokens } = await getDocumentData("deviceTokens", email);
+    const deviceTokensRef = db.collection("deviceTokens").doc(email);
+    const deviceTokensDoc = await deviceTokensRef.get();
+    const { [sourceField]: tokens, ...theRest } = deviceTokensDoc.data();
     try {
-      const response = await getMessaging().unsubscribeFromTopic(
-        deviceTokens,
-        topic
-      );
-      removeTopicFromTokenDetails(deviceTokens, topic);
+      await getMessaging().unsubscribeFromTopic(tokens, topic);
+      removeTopicFromTokenDetails(tokens, topic);
       res.status(200).json({
         status: "success",
-        message: `Successfully unsubscribed from topic:', ${response}`,
+        message: `Successfully unsubscribed from topic:', ${topic}`,
       });
     } catch (error) {
       res.status(501).json({
