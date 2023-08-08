@@ -1,18 +1,20 @@
 const { getMessaging } = require("firebase-admin/messaging");
-const { getFirestore } = require("firebase-admin/firestore");
-const { getAccountTokens } = require("./utils");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { getAccountTokens, checkIfDocumentExists } = require("./utils");
 
 const db = getFirestore();
 
 exports.sendToMultipleAccounts = async (req, res) => {
-  const { accounts, title, body } = req.body;
+  const { accounts, title, body, source } = req.body;
 
-  if (!title || !body || !accounts) {
+  if (!title || !body || !accounts || !source) {
     res.status(400).json({
       status: "fail",
-      message: "Missing fields, title, body and tokens array must be provided",
+      message:
+        "Missing fields, title, body, emails and source array must be provided",
     });
   } else {
+    const sourceField = `${source}Tokens`;
     const message = {
       notification: {
         title,
@@ -22,22 +24,28 @@ exports.sendToMultipleAccounts = async (req, res) => {
     };
     tokens = [];
     for (let i = 0; i < accounts.length; i++) {
-      const deviceTokensRef = db.collection("deviceTokens").doc(accounts[i]);
-      const deviceTokenDoc = await deviceTokensRef.get();
-
-      if (!deviceTokenDoc.exists) {
-        res.status(500).json({
-          status: "fail",
-          message: `Account '${accounts[i]}' not found!`,
-        });
-        break;
-      } else {
-        const { deviceTokens } = deviceTokenDoc.data();
-        tokens = tokens.concat(deviceTokens);
+      try {
+        const deviceTokensRef = db.collection("deviceTokens").doc(accounts[i]);
+        const deviceTokenDoc = await deviceTokensRef.get();
+        if (!deviceTokenDoc.exists) {
+          res.status(500).json({
+            status: "fail",
+            message: `Account '${accounts[i]}' not found!`,
+          });
+          break;
+        } else {
+          // TODO check if account has no source tokens
+          const { [sourceField]: accTokens, ...theRest } =
+            deviceTokenDoc.data();
+          tokens = tokens.concat(accTokens);
+        }
+      } catch (error) {
+        console.log(error);
       }
     }
+    console.log(await tokens);
 
-    message.tokens = await tokens;
+    message.tokens = tokens;
 
     const batchResponse = await getMessaging().sendEachForMulticast(message);
 
@@ -71,10 +79,10 @@ exports.sendToMultipleAccounts = async (req, res) => {
 
 exports.sendToSingleAccount = async (req, res) => {
   const { email, title, body, source } = req.body;
-  if (!email || !title || !body) {
+  if (!email || !title || !body || !source) {
     res.status(400).json({
       status: "fail",
-      message: "Missing fields, title, body and email must be provided",
+      message: "Missing fields, title, body, email and source must be provided",
     });
   } else {
     const deviceTokensRef = db.collection("deviceTokens").doc(email);
@@ -87,7 +95,6 @@ exports.sendToSingleAccount = async (req, res) => {
       return;
     }
     const tokens = await getAccountTokens(email, source);
-    console.log(tokens);
     const message = {
       notification: {
         title,
@@ -141,16 +148,29 @@ exports.sendToTopic = async (req, res) => {
       topic: topic,
     };
 
-    try {
-      await getMessaging().send(message);
-      res.status(200).json({
-        status: "success",
-        message: `Successfully sent message to topic: ${topic}`,
-      });
-    } catch (error) {
-      res.status(500).json({
+    const topicExists = await checkIfDocumentExists("topics", topic);
+    if (topicExists) {
+      try {
+        await getMessaging().send(message);
+
+        res.status(200).json({
+          status: "success",
+          message: `Successfully sent message to topic: ${topic}`,
+        });
+        const topicReference = db.collection("topics").doc(topic);
+        await topicReference.update({
+          timesCalled: FieldValue.increment(1),
+        });
+      } catch (error) {
+        res.status(500).json({
+          status: "fail",
+          message: `Error sending message: ${error}`,
+        });
+      }
+    } else {
+      res.status(400).json({
         status: "fail",
-        message: `Error sending message: ${error}`,
+        message: `This topic does not exists: ${topic}`,
       });
     }
   }

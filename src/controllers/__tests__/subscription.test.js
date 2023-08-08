@@ -23,16 +23,19 @@ describe("when calling the subscritpion controller", () => {
     email: "chechoperez@email.com",
     token: "abc123",
     deviceType: "android",
+    source: "test",
   };
 
   testData = {
     email: "chechoperez@email.com",
     topic: "testtopic",
+    source: "test",
   };
 
   testWrongData = {
     email: chance.email(),
     topic: chance.string(),
+    source: chance.string(),
   };
 
   beforeAll(async () => {
@@ -84,7 +87,7 @@ describe("when calling the subscritpion controller", () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       status: "fail",
-      message: `Email and topic should be provided!`,
+      message: `Email, topic and source should be provided!`,
     });
   });
 });

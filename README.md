@@ -207,10 +207,11 @@ status: true/false
 ]
 
 # TODOS
-
     - Change email logic
     - When a token is added to an existing account, subscribe to topics...
     - Delete topic if zero subscribers...
+    - Modify topic endpoint to generate statistics
+    - Modify counts to use Fieldvalue.Increment
 
 # Notes
 

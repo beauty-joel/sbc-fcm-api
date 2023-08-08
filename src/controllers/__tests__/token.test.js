@@ -64,7 +64,7 @@ describe("when calling the token controller", () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       status: "fail",
-      message: "A token must be provided",
+      message: "A token and source must be provided",
     });
   });
 });

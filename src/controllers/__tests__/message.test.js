@@ -17,16 +17,19 @@ describe("when calling the message controller", () => {
       email: "test1@email.com",
       token: testToken,
       deviceType: "android",
+      source: "test",
     },
     {
       email: "test2@email.com",
       token: testToken,
       deviceType: "android",
+      source: "test",
     },
     {
       email: "test3@email.com",
       token: testToken,
       deviceType: "android",
+      source: "test",
     },
   ];
 
@@ -115,6 +118,7 @@ describe("when calling the message controller", () => {
         email: "test1@email.com",
         title: "Test message to single account",
         body: "This is a message to a single account",
+        source: "test",
       },
     };
     await MessageController.sendToSingleAccount(req, res);
@@ -129,6 +133,7 @@ describe("when calling the message controller", () => {
         accounts: testAccountsEmails,
         title: "This is a message to multple accounts",
         body: "Message body",
+        source: "test",
       },
     };
     await MessageController.sendToMultipleAccounts(req, res);
