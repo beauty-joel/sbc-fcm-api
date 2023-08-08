@@ -1,5 +1,6 @@
 const { getMessaging } = require("firebase-admin/messaging");
 const { getFirestore } = require("firebase-admin/firestore");
+const { getAccountTokens } = require("./utils");
 
 const db = getFirestore();
 
@@ -69,7 +70,7 @@ exports.sendToMultipleAccounts = async (req, res) => {
 };
 
 exports.sendToSingleAccount = async (req, res) => {
-  const { email, title, body } = req.body;
+  const { email, title, body, source } = req.body;
   if (!email || !title || !body) {
     res.status(400).json({
       status: "fail",
@@ -85,13 +86,14 @@ exports.sendToSingleAccount = async (req, res) => {
       });
       return;
     }
-    const { deviceTokens } = docSnapshot.data();
+    const tokens = await getAccountTokens(email, source);
+    console.log(tokens);
     const message = {
       notification: {
         title,
         body,
       },
-      tokens: deviceTokens,
+      tokens: tokens,
     };
     const batchResponse = await getMessaging().sendEachForMulticast(message);
     if (batchResponse.failureCount.successCount == 0) {
@@ -103,7 +105,7 @@ exports.sendToSingleAccount = async (req, res) => {
       const failedTokens = [];
       batchResponse.responses.forEach((resp, idx) => {
         if (!resp.success) {
-          failedTokens.push(deviceTokens[idx]);
+          failedTokens.push(tokens[idx]);
         }
       });
       res.status(500).json({
@@ -116,7 +118,7 @@ exports.sendToSingleAccount = async (req, res) => {
     } else {
       res.status(200).json({
         status: "success",
-        message: `Message sent to ${deviceTokens.length} device(s).`,
+        message: `Message sent to ${tokens.length} device(s).`,
       });
     }
   }
