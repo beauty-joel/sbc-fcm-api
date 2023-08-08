@@ -15,3 +15,16 @@ exports.getDocumentData = async (collection, document) => {
   const documentSnapshot = await documentReference.get();
   return documentSnapshot.data();
 };
+
+exports.getAccountTopics = async (email, source) => {
+  const sourceField = `${source}Tokens`;
+  const deviceTokensRef = db.collection("deviceTokens").doc(email);
+  const deviceTokensDoc = await deviceTokensRef.get();
+  const { [sourceField]: tokens, ...theRest } = deviceTokensDoc.data();
+
+  const ref = db.collection("tokenDetails").doc(tokens[0]);
+  const doc = await ref.get();
+  const { topics } = doc.data();
+
+  return topics;
+};

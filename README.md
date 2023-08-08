@@ -206,26 +206,15 @@ status: true/false
 }
 ]
 
-## TODOS
+# TODOS
 
     - Change email logic
-    - When register a new device token check if other tokens are already subscribed to a topic
+    - When a token is added to an existing account, subscribe to topics...
+    - Delete topic if zero subscribers...
 
 # Notes
 
 - If we want to keep the API 'agnostic' we should perstist info about which app is sending the request.
-
 - What's going to append if the user changes his email in only one app
 
-## Delete token flow
-
-- Validate request body
-- Validate if token exists
-
-* If it is the unique token linked to the account source
-  - Check if token is subscribed to topic(s)
-  - Update topics subscription count
-  - Delete token details
-  - Delete account
-* Delete document form 'tokenDetails' collection
-* Update document to remove token form 'deviceTokens'
+# TODO's

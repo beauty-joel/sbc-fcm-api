@@ -5,7 +5,11 @@ const {
 } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 
-const { checkIfDocumentExists, getDocumentData } = require("./utils");
+const {
+  checkIfDocumentExists,
+  getDocumentData,
+  getAccountTopics,
+} = require("./utils");
 
 const db = getFirestore();
 
@@ -27,13 +31,19 @@ const saveDeviceTokens = async (email, token, source) => {
   }
 };
 
-const saveTokenDetails = async (email, token, deviceType, source) => {
+const saveTokenDetails = async (
+  email,
+  token,
+  deviceType,
+  source,
+  topics = []
+) => {
   try {
     const data = {
       createdAt: Timestamp.now(),
       deviceType,
       email,
-      topics: [],
+      topics,
       source,
     };
 
@@ -46,7 +56,7 @@ const saveTokenDetails = async (email, token, deviceType, source) => {
 exports.saveToken = async (req, res) => {
   const { email, token, deviceType, source } = req.body;
 
-  if (!email && !token && !deviceType && !source) {
+  if (!email || !token || !deviceType || !source) {
     res.status(400).json({
       status: "fail",
       message: "Missing fields",
@@ -54,16 +64,28 @@ exports.saveToken = async (req, res) => {
   } else {
     // Test if token already exists
     const tokenExists = await checkIfDocumentExists("tokenDetails", token);
-    console.log(tokenExists);
+    const accountExists = await checkIfDocumentExists("deviceTokens", email);
     if (tokenExists) {
       res.status(400).json({
         status: "fail",
         message: "Token already exists",
       });
     } else {
+      //
+      let topics = [];
+
+      if (accountExists) {
+        topics = await getAccountTopics(email, source);
+        if (topics.length > 0) {
+          topics.forEach(async (topic) => {
+            await getMessaging().subscribeToTopic(token, topic);
+          });
+        }
+      }
+
       // Save
       await saveDeviceTokens(email, token, source);
-      await saveTokenDetails(email, token, deviceType, source);
+      await saveTokenDetails(email, token, deviceType, source, topics);
       res.status(200).json({
         status: "success",
         message: "Token successfully saved",
@@ -121,7 +143,7 @@ exports.deleteToken = async (req, res) => {
         // Delete associated "deviceTokens" dcoument.
         await db.collection("deviceTokens").doc(email).delete();
       } else {
-        // Update token list
+        // Update account's token list to remove token
         await deviceTokensRef.update({
           [sourceField]: FieldValue.arrayRemove(token),
         });
