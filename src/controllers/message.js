@@ -43,7 +43,6 @@ exports.sendToMultipleAccounts = async (req, res) => {
         console.log(error);
       }
     }
-    console.log(await tokens);
 
     message.tokens = tokens;
 

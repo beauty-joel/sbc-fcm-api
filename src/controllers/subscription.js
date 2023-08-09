@@ -84,48 +84,48 @@ exports.subscribeToTopic = async (req, res) => {
       status: "fail",
       message: "Email, topic and source should be provided!",
     });
-  }
-
-  // 2) Check if account document exists
-  const accountExists = await checkIfDocumentExists("deviceTokens", email);
-  if (!accountExists) {
-    res.status(404).json({
-      status: "fail",
-      message: `Account ${email} not found.`,
-    });
   } else {
-    // 3) Check if account is already subscribed to the topic
-    const isSubscribed = await checkIfSubscribed(email, topic);
-
-    if (isSubscribed) {
+    // 2) Check if account document exists
+    const accountExists = await checkIfDocumentExists("deviceTokens", email);
+    if (!accountExists) {
       res.status(404).json({
         status: "fail",
-        message: `Account ${email} is already subscribre to the topic: ${topic}.`,
+        message: `Account ${email} not found.`,
       });
-    }
-    // 4) Subscribe to topic
-    else {
-      const deviceTokensRef = db.collection("deviceTokens").doc(email);
-      const deviceTokensDoc = await deviceTokensRef.get();
-      const { [sourceField]: tokens, ...theRest } = deviceTokensDoc.data();
-      try {
-        // Actual subscription to topic in Firebase Cloud Messaging
-        await getMessaging().subscribeToTopic(tokens, topic);
-        // Register or Create Topic to Topics Colllection
-        await registerTopic(topic, source);
-      } catch (error) {
-        res.status(501).json({
+    } else {
+      // 3) Check if account is already subscribed to the topic
+      const isSubscribed = await checkIfSubscribed(email, topic);
+
+      if (isSubscribed) {
+        res.status(404).json({
           status: "fail",
-          message: `Error subscribing to topic:', ${error}`,
+          message: `Account ${email} is already subscribre to the topic: ${topic}.`,
         });
       }
-      // Update tokens topic list
-      addTopicToTokenDetails(tokens, topic);
+      // 4) Subscribe to topic
+      else {
+        const deviceTokensRef = db.collection("deviceTokens").doc(email);
+        const deviceTokensDoc = await deviceTokensRef.get();
+        const { [sourceField]: tokens, ...theRest } = deviceTokensDoc.data();
+        try {
+          // Actual subscription to topic in Firebase Cloud Messaging
+          await getMessaging().subscribeToTopic(tokens, topic);
+          // Register or Create Topic to Topics Colllection
+          await registerTopic(topic, source);
+        } catch (error) {
+          res.status(501).json({
+            status: "fail",
+            message: `Error subscribing to topic:', ${error}`,
+          });
+        }
+        // Update tokens topic list
+        addTopicToTokenDetails(tokens, topic);
 
-      res.status(200).json({
-        status: "success",
-        message: `Successfully subscribed to topic:', ${topic}`,
-      });
+        res.status(200).json({
+          status: "success",
+          message: `Successfully subscribed to topic:', ${topic}`,
+        });
+      }
     }
   }
 };

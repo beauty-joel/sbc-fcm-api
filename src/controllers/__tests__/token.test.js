@@ -21,6 +21,7 @@ describe("when calling the token controller", () => {
       email: chance.email(),
       token: chance.string(),
       deviceType: "android",
+      source: "test",
     },
   };
 
@@ -46,6 +47,7 @@ describe("when calling the token controller", () => {
     req = {
       body: {
         token: chance.string(),
+        source: "test",
       },
     };
     await TokenController.deleteToken(req, res);

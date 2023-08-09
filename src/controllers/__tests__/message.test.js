@@ -19,18 +19,6 @@ describe("when calling the message controller", () => {
       deviceType: "android",
       source: "test",
     },
-    {
-      email: "test2@email.com",
-      token: testToken,
-      deviceType: "android",
-      source: "test",
-    },
-    {
-      email: "test3@email.com",
-      token: testToken,
-      deviceType: "android",
-      source: "test",
-    },
   ];
 
   const messageBatch = [
@@ -115,9 +103,9 @@ describe("when calling the message controller", () => {
   it("should send a message to an account", async () => {
     req = {
       body: {
-        email: "test1@email.com",
         title: "Test message to single account",
         body: "This is a message to a single account",
+        email: "test1@email.com",
         source: "test",
       },
     };

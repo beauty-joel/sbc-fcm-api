@@ -123,7 +123,6 @@ exports.deleteToken = async (req, res) => {
         const ref = db.collection("tokenDetails").doc(token);
         const doc = await ref.get();
         const { topics } = (await doc).data();
-        console.log(topics);
         // If tokens subscriptions...
         if (topics.length > 0) {
           topics.forEach(async (topic) => {
