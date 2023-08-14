@@ -49,7 +49,6 @@ The `api` app has a total of 9 endpoints.
 http:127.0.0.1:8000/sbc-fcm-api/v1/message/account/single *
 http:127.0.0.1:8000/sbc-fcm-api/v1/message/account/group *
 
-TODO
 http:127.0.0.1:8000/sbc-fcm-api/v1/topics
 
 http:127.0.0.1:8000/sbc-fcm-api/v1/subscriptions *
@@ -207,6 +206,7 @@ status: true/false
 ]
 
 # TODOS
+
     - Change email logic
     - When a token is added to an existing account, subscribe to topics...
     - Delete topic if zero subscribers...
