@@ -76,19 +76,51 @@ const db = getFirestore();
 
 exports.saveToken = async (requestBody) => {
   const { email, token, source, deviceType } = requestBody;
+
+  const sourceField = `${source}Tokens`;
   const tokenReference = db.doc(`tokenDetails/${token}`);
-  const accountReference = db.dob(`deviceTokens/${email}`);
+  const accountReference = db.doc(`deviceTokens/${email}`);
 
   try {
     await db.runTransaction(async (transaction) => {
+      let topics = [];
       const tokenDocument = await transaction.get(tokenReference);
       const accountDocument = await transaction.get(accountReference);
-      console.log(tokenDocument);
       if (tokenDocument.exists) {
         throw new Error("Token already exists!");
       }
 
       if (accountDocument.exists) {
+        const { [sourceField]: tokens, ...theRest } = accountDocument.data();
+        console.log(tokens[0]);
+        const singleTokenReference = db.doc(`tokenDetails/${tokens[0]}`);
+        const singleTokenDocument = await transaction.get(singleTokenReference);
+        topics = singleTokenDocument.data().topics;
+
+        if (topics.length > 0) {
+          console.log("Topic Subscription");
+          //   topics.forEach(async (topic) => {
+          //     await getMessaging().subscribeToTopic(token, topic);
+          //   });
+        }
+        console.log(topics);
+
+        // Save token details
+        const tokenData = {
+          createdAt: Timestamp.now(),
+          deviceType,
+          email,
+          topics,
+          source,
+        };
+
+        const newTokenReference = db.collection("tokenDetails").doc(token);
+
+        transaction.set(newTokenReference, tokenData);
+        transaction.update(accountReference, {
+          [sourceField]: FieldValue.arrayUnion(token),
+        });
+      } else {
       }
 
       // Add one person to the city population.
