@@ -212,6 +212,11 @@ status: true/false
     - Delete topic if zero subscribers...
     - Modify topic endpoint to generate statistics
     - Modify counts to use Fieldvalue.Increment
+    - Delete account if document is empty
+
+# BUGS
+
+    - Error when a accounts is empty and tries to create a new topic
 
 # Notes
 

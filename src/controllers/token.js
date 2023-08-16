@@ -7,53 +7,7 @@ const { getMessaging } = require("firebase-admin/messaging");
 
 const tokenServices = require("../services/tokens");
 
-// const {
-//   checkIfDocumentExists,
-//   getDocumentData,
-//   getAccountTopics,
-// } = require("./utils");
-
 const db = getFirestore();
-
-// const saveDeviceTokens = async (email, token, source) => {
-//   try {
-//     const deviceTokensRef = db.collection("deviceTokens").doc(email);
-//     const deviceTokensDoc = await deviceTokensRef.get();
-//     const fieldName = `${source}Tokens`;
-//     if (deviceTokensDoc.exists) {
-//       await deviceTokensRef.update({
-//         [fieldName]: FieldValue.arrayUnion(token),
-//       });
-//     } else {
-//       await deviceTokensRef.set({ [fieldName]: [token] });
-//     }
-//     return "Device token saved!";
-//   } catch (error) {
-//     console.log(error);
-//   }
-// };
-
-// const saveTokenDetails = async (
-//   email,
-//   token,
-//   deviceType,
-//   source,
-//   topics = []
-// ) => {
-//   try {
-//     const data = {
-//       createdAt: Timestamp.now(),
-//       deviceType,
-//       email,
-//       topics,
-//       source,
-//     };
-
-//     await db.collection("tokenDetails").doc(token).set(data);
-//   } catch (error) {
-//     throw new Error(error.details);
-//   }
-// };
 
 exports.saveToken = async (req, res) => {
   const { email, token, deviceType, source } = req.body;
@@ -64,11 +18,11 @@ exports.saveToken = async (req, res) => {
       message: "Missing fields",
     });
   } else {
-    const token = await tokenServices.saveToken(req.body);
-    if (token.status == "fail") {
+    const tokenResponse = await tokenServices.saveToken(req.body);
+    if (tokenResponse.status == "fail") {
       res.status(500).json({
         status: "fail",
-        message: `Error: ${token.message}`,
+        message: `Error: ${tokenResponse.message}`,
       });
     } else {
       res.status(200).json({
@@ -79,68 +33,30 @@ exports.saveToken = async (req, res) => {
   }
 };
 
-// exports.deleteToken = async (req, res) => {
-//   const { token, source } = req.body;
+exports.deleteToken = async (req, res) => {
+  const { token, source } = req.body;
 
-//   if (token && source) {
-//     // Check if token exists
-//     const tokenExists = await checkIfDocumentExists("tokenDetails", token);
-//     if (!tokenExists) {
-//       res.status(404).json({
-//         status: "fail",
-//         message: `Token '${token}' not found!`,
-//       });
-//     } else {
-//       const sourceField = `${source}Tokens`;
+  if (!token || !source) {
+    // Check if token exists
 
-//       // Get the email associated with the token
-//       const tokenDetails = await getDocumentData("tokenDetails", token);
-//       const { email } = tokenDetails;
-
-//       // Get all the tokens assciated with the email
-//       const deviceTokensRef = db.collection("deviceTokens").doc(email);
-//       const deviceTokensDoc = await deviceTokensRef.get();
-//       const { [sourceField]: tokens, ...theRest } = deviceTokensDoc.data();
-
-//       // If there is only one token...
-//       if (tokens.length == 1) {
-//         // Get token subscriptions
-//         const ref = db.collection("tokenDetails").doc(token);
-//         const doc = await ref.get();
-//         const { topics } = (await doc).data();
-//         // If tokens subscriptions...
-//         if (topics.length > 0) {
-//           topics.forEach(async (topic) => {
-//             // Unsubscribe from Firebase Cloud Messaging Topic
-//             await getMessaging().unsubscribeFromTopic(token, topic);
-
-//             // Update topic subscribers count
-//             const topicReference = db.collection("topics").doc(topic);
-//             const topicDocument = await topicReference.get();
-//             const topicData = topicDocument.data();
-//             await topicReference.update({
-//               noSubscriptors: topicData.noSubscriptors - 1,
-//             });
-//           });
-//         }
-
-//         // Delete associated "deviceTokens" dcoument.
-//         await db.collection("deviceTokens").doc(email).delete();
-//       } else {
-//         // Update account's token list to remove token
-//         await deviceTokensRef.update({
-//           [sourceField]: FieldValue.arrayRemove(token),
-//         });
-//       }
-
-//       // Delete "tokenDetails" document
-//       await db.collection("tokenDetails").doc(token).delete();
-//       res.status(204).json();
-//     }
-//   } else {
-//     res.status(400).json({
-//       status: "fail",
-//       message: "A token and source must be provided",
-//     });
-//   }
-// };
+    res.status(400).json({
+      status: "fail",
+      message: "A token and source must be provided",
+    });
+  } else {
+    const tokenResponse = await tokenServices.deleteToken(req.body);
+    if (tokenResponse.status == "fail") {
+      res.status(400).json({
+        status: "fail",
+        message: `Error: ${tokenResponse.message}`,
+      });
+    } else if (tokenResponse.status == "success") {
+      res.status(204).json();
+    } else {
+      res.status(500).json({
+        status: "fail",
+        message: "Error unknown when deleting a token",
+      });
+    }
+  }
+};
