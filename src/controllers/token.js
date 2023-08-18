@@ -1,13 +1,4 @@
-const {
-  getFirestore,
-  Timestamp,
-  FieldValue,
-} = require("firebase-admin/firestore");
-const { getMessaging } = require("firebase-admin/messaging");
-
 const tokenServices = require("../services/tokens");
-
-const db = getFirestore();
 
 exports.saveToken = async (req, res) => {
   const { email, token, deviceType, source } = req.body;
