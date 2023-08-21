@@ -27,13 +27,11 @@ exports.subscribeToTopic = async (requestBody) => {
         ...theRest
       } = accountDocument.data();
 
-      if (!topics || !tokens) {
-        throw new Error(
-          "Tokens or topics not found, possible source field error!"
-        );
+      if (!tokens) {
+        throw new Error("Tokens not found!");
       }
 
-      if (topics.includes(topic)) {
+      if (topics && topics.includes(topic)) {
         throw new Error("Account already subscribed to topic!");
       }
 
@@ -48,10 +46,6 @@ exports.subscribeToTopic = async (requestBody) => {
         tokenReferenceList.push(tokenReference);
       });
 
-      const tokensSnapshots = await transaction.getAll(...tokenReferenceList);
-
-      console.log(tokensSnapshots);
-
       const topicReference = db.collection("topics").doc(topic);
       const topicDocument = await transaction.get(topicReference);
 
@@ -59,6 +53,10 @@ exports.subscribeToTopic = async (requestBody) => {
         transaction.update(tokenSnapshot, {
           topics: FieldValue.arrayUnion(topic),
         });
+      });
+
+      transaction.update(accountReference, {
+        [sourceTopics]: FieldValue.arrayUnion(topic),
       });
 
       if (!topicDocument.exists) {
@@ -95,137 +93,66 @@ exports.subscribeToTopic = async (requestBody) => {
   };
 };
 
-// const db = getFirestore();
+exports.unsubscribeFromTopic = async (requestBody) => {
+  const { email, topic, source } = requestBody;
+  const sourceField = `${source}Tokens`;
+  const sourceTopics = `${source}Topics`;
 
-// async function checkIfDocumentExists(collection, document) {
-//   try {
-//     const doc = await db.collection(collection).doc(document).get();
-//     return doc.exists;
-//   } catch (error) {
-//     console.log(error);
-//   }
-// }
+  const accountReference = db.doc(`deviceTokens/${email}`);
+  const topicReference = db.collection("topics").doc(topic);
 
-// async function checkIfSubscribed(email, topic) {
-//   const tokensRef = db.collection("tokenDetails");
-//   const query = tokensRef
-//     .where("email", "==", email)
-//     .where("topics", "array-contains", topic);
-//   const snapshot = await query.count().get();
-//   if (snapshot.data().count > 0) {
-//     return true;
-//   } else {
-//     return false;
-//   }
-// }
+  let tokensReferencesList = [];
+  try {
+    await db.runTransaction(async (transaction) => {
+      const accountDocument = await transaction.get(accountReference);
+      if (!accountDocument.exists) {
+        throw new Error("Account not found!");
+      }
 
-// async function registerTopic(topic, source) {
-//   const topicReference = db.collection("topics").doc(topic);
-//   const topicDocument = await topicReference.get();
-//   const topicExists = topicDocument.exists;
+      const {
+        [sourceTopics]: topics,
+        [sourceField]: tokens,
+        ...theRest
+      } = accountDocument.data();
 
-//   if (!topicExists) {
-//     const data = {
-//       createdAt: Timestamp.now(),
-//       lastUsedAt: Timestamp.now(),
-//       timesCalled: 0,
-//       noSubscriptors: 1,
-//       active: true,
-//       source: source,
-//     };
+      if (!topics.includes(topic)) {
+        throw new Error("Topic not found!");
+      }
 
-//     // Add a new document in collection "topics" with ID 'topicName'
-//     await topicReference.set(data);
-//   } else {
-//     const topicData = topicDocument.data();
-//     // Update number of subscriptors
-//     await topicReference.update({
-//       noSubscriptors: topicData.noSubscriptors + 1,
-//     });
-//   }
-// }
+      tokens.forEach((token) => {
+        const tokReferecen = db.collection("tokenDetails").doc(token);
+        tokensReferencesList.push(tokReferecen);
+      });
 
-// function addTopicToTokenDetails(deviceTokens, topic) {
-//   deviceTokens.forEach(async (token) => {
-//     const tokenRef = db.collection("tokenDetails").doc(token);
-//     await tokenRef.update({
-//       topics: FieldValue.arrayUnion(topic),
-//     });
-//   });
-// }
+      tokensReferencesList.forEach((tokenRef) => {
+        transaction.update(tokenRef, {
+          topics: FieldValue.arrayRemove(topic),
+        });
+      });
+      transaction.update(accountReference, {
+        [sourceTopics]: FieldValue.arrayRemove(topic),
+      });
 
-// function removeTopicFromTokenDetails(deviceTokens, topic) {
-//   deviceTokens.forEach(async (token) => {
-//     const tokenRef = db.collection("tokenDetails").doc(token);
-//     await tokenRef.update({
-//       topics: FieldValue.arrayRemove(topic),
-//     });
-//   });
-// }
+      transaction.update(topicReference, {
+        noSubscriptors: FieldValue.increment(-1),
+      });
+      await getMessaging().unsubscribeFromTopic(tokens, topic);
+    });
+  } catch (error) {
+    console.log(error);
+    return {
+      status: "fail",
+      message: `${error}`,
+    };
+  }
 
-// exports.subscribeToTopic = async (req, res) => {
-//   const { email, topic, source } = req.body;
-//   const sourceField = `${source}Tokens`;
-//   // TODO Refactor request validation to a middleware
-//   // 1) Check request body payload
-//   if (!email || !topic || !source) {
-//     res.status(400).json({
-//       status: "fail",
-//       message: "Email, topic and source should be provided!",
-//     });
-//   } else {
-//     // 2) Check if account document exists
-//     const accountExists = await checkIfDocumentExists("deviceTokens", email);
-//     if (!accountExists) {
-//       res.status(404).json({
-//         status: "fail",
-//         message: `Account ${email} not found.`,
-//       });
-//     } else {
-//       // 3) Check if account is already subscribed to the topic
-//       const isSubscribed = await checkIfSubscribed(email, topic);
-
-//       if (isSubscribed) {
-//         res.status(404).json({
-//           status: "fail",
-//           message: `Account ${email} is already subscribre to the topic: ${topic}.`,
-//         });
-//       }
-//       // 4) Subscribe to topic
-//       else {
-//         const deviceTokensRef = db.collection("deviceTokens").doc(email);
-//         const deviceTokensDoc = await deviceTokensRef.get();
-//         const { [sourceField]: tokens, ...theRest } = deviceTokensDoc.data();
-//         try {
-//           // Actual subscription to topic in Firebase Cloud Messaging
-//           await getMessaging().subscribeToTopic(tokens, topic);
-//           // Register or Create Topic to Topics Colllection
-//           await registerTopic(topic, source);
-//         } catch (error) {
-//           res.status(501).json({
-//             status: "fail",
-//             message: `Error subscribing to topic:', ${error}`,
-//           });
-//         }
-//         // Update tokens topic list
-//         addTopicToTokenDetails(tokens, topic);
-
-//         res.status(200).json({
-//           status: "success",
-//           message: `Successfully subscribed to topic:', ${topic}`,
-//         });
-//       }
-//     }
-//   }
-// };
+  return {
+    status: "success",
+    message: "Unsubscribed from topic!",
+  };
+};
 
 // exports.unsubscribeFromTopic = async (req, res) => {
-//   const { email, topic, source } = req.body;
-
-//   const sourceField = `${source}Tokens`;
-
-//   const accountExists = await checkIfDocumentExists("deviceTokens", email);
-//   const topicExists = await checkIfDocumentExists("topics", topic);
 
 //   // TODO add validation for already unsubscribed
 
