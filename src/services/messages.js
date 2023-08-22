@@ -163,95 +163,87 @@ exports.sendToToken = async (requestBody) => {
   }
 };
 
-// exports.sendBatch = async (req, res) => {
-//   const { messages } = req.body;
-//   if (messages && Array.isArray(messages)) {
-//     try {
-//       const responseBatch = await getMessaging().sendEach(messages);
-//       res.status(200).json({
-//         status: "success",
-//         message: "All messages were send.",
-//       });
-//     } catch (error) {
-//       res.status(500).json({
-//         status: "fail",
-//         message: `There was an error: ${error}`,
-//       });
-//     }
-//   } else {
-//     res.status(400).json({
-//       status: "fail",
-//       message: "A messages array must be provided",
-//     });
-//   }
-// };
+exports.sendBatch = async (requestBody) => {
+  const { messages } = requestBody;
+  if (messages && Array.isArray(messages)) {
+    try {
+      const responseBatch = await getMessaging().sendEach(messages);
+      return {
+        status: "success",
+        message: "All messages were send.",
+      };
+    } catch (error) {
+      return {
+        status: "fail",
+        message: `${error}`,
+      };
+    }
+  } else {
+    return {
+      status: "fail",
+      message: "A messages array must be provided",
+    };
+  }
+};
 
-// exports.sendToGroup = async (req, res) => {
-//   const { tokens, title, body } = req.body;
+exports.sendToGroup = async (requestBody) => {
+  const { tokens, title, body } = requestBody;
 
-//   const message = {
-//     notification: {
-//       title,
-//       body,
-//     },
-//     tokens,
-//   };
+  const message = {
+    notification: {
+      title,
+      body,
+    },
+    tokens,
+  };
 
-//   const batchResponse = await getMessaging().sendEachForMulticast(message);
-//   if (batchResponse.failureCount.successCount == 0) {
-//     res.status(501).json({
-//       status: "fail",
-//       message: "Failed to send all messages",
-//     });
-//   } else if (batchResponse.failureCount > 0) {
-//     const failedTokens = [];
-//     batchResponse.responses.forEach((resp, idx) => {
-//       if (!resp.success) {
-//         failedTokens.push(tokens[idx]);
-//       }
-//     });
-//     res.status(501).json({
-//       status: "fail",
-//       message: "Failed to send message to some tokens",
-//       data: {
-//         failedTokens,
-//       },
-//     });
-//   } else {
-//     res.status(200).json({
-//       status: "success",
-//       message: `Message sent to ${tokens.length} device(s).`,
-//     });
-//   }
-// };
+  const batchResponse = await getMessaging().sendEachForMulticast(message);
+  if (batchResponse.failureCount.successCount == 0) {
+    return {
+      status: "fail",
+      message: "Failed to send all messages",
+    };
+  } else if (batchResponse.failureCount > 0) {
+    const failedTokens = [];
+    batchResponse.responses.forEach((resp, idx) => {
+      if (!resp.success) {
+        failedTokens.push(tokens[idx]);
+      }
+    });
+    return {
+      status: "fail",
+      message: "Failed to send message to some tokens",
+      data: {
+        failedTokens,
+      },
+    };
+  } else {
+    return {
+      status: "success",
+      message: `Message sent to ${tokens.length} device(s).`,
+    };
+  }
+};
 
-// exports.sentToSingleDevice = async (req, res) => {
-//   const { token, title, body } = req.body;
-
-//   if (token && title && body) {
-//     const message = {
-//       notification: {
-//         title,
-//         body,
-//       },
-//       token,
-//     };
-//     try {
-//       const response = await getMessaging().send(message);
-//       res.status(200).json({
-//         status: "success",
-//         message: `Successfully sent message: ${response}`,
-//       });
-//     } catch (error) {
-//       res.status(501).json({
-//         status: "fail",
-//         message: `Failed to send message to token: ${token}`,
-//       });
-//     }
-//   } else {
-//     res.status(400).json({
-//       status: "fail",
-//       message: "Missing fields, title, body and token must be provided!",
-//     });
-//   }
-// };
+exports.sentToSingleDevice = async (requestBody) => {
+  const { token, title, body } = requestBody;
+  const message = {
+    notification: {
+      title,
+      body,
+    },
+    token,
+  };
+  try {
+    const response = await getMessaging().send(message);
+    return {
+      status: "success",
+      message: `Successfully sent message: ${token}`,
+    };
+  } catch (error) {
+    return {
+      status: "fail",
+      message: `Failed to send message to token: ${token}`,
+    };
+  }
+};

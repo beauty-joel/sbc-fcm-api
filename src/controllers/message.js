@@ -70,56 +70,71 @@ exports.sendToTopic = async (req, res) => {
   }
 };
 
-// exports.sendToSingleAccount = async (req, res) => {
-//   const { email, title, body, source } = req.body;
-//   if (!email || !title || !body || !source) {
-//     res.status(400).json({
-//       status: "fail",
-//       message: "Missing fields, title, body, email and source must be provided",
-//     });
-//   } else {
-//     const deviceTokensRef = db.collection("deviceTokens").doc(email);
-//     const docSnapshot = await deviceTokensRef.get();
-//     if (!docSnapshot.exists) {
-//       res.status(500).json({
-//         status: "fail",
-//         message: `Account ${email} not found!`,
-//       });
-//       return;
-//     }
-//     const tokens = await getAccountTokens(email, source);
-//     const message = {
-//       notification: {
-//         title,
-//         body,
-//       },
-//       tokens: tokens,
-//     };
-//     const batchResponse = await getMessaging().sendEachForMulticast(message);
-//     if (batchResponse.failureCount.successCount == 0) {
-//       res.status(500).json({
-//         status: "fail",
-//         message: "Failed to send all messages",
-//       });
-//     } else if (batchResponse.failureCount > 0) {
-//       const failedTokens = [];
-//       batchResponse.responses.forEach((resp, idx) => {
-//         if (!resp.success) {
-//           failedTokens.push(tokens[idx]);
-//         }
-//       });
-//       res.status(500).json({
-//         status: "fail",
-//         message: "Failed to send message to some tokens",
-//         data: {
-//           failedTokens,
-//         },
-//       });
-//     } else {
-//       res.status(200).json({
-//         status: "success",
-//         message: `Message sent to ${tokens.length} device(s).`,
-//       });
-//     }
-//   }
-// };
+exports.sendToGroup = async (req, res) => {
+  const { title, body, tokens } = req.body;
+
+  if (!title || !body || !tokens) {
+    res.status(400).json({
+      status: "fail",
+      message: "Missing fields, title, body and tokens must be provided",
+    });
+  } else {
+    const message = await messagesService.sendToGroup(req.body);
+    if (message.status == "success") {
+      res.status(200).json(message);
+    } else if (message.status == "fail") {
+      res.status(400).json(message);
+    } else {
+      res.status(500).json({
+        status: "fail",
+        message:
+          "Unknown error while trying to send message to a group of tokens!",
+      });
+    }
+  }
+};
+
+exports.sendBatch = async (req, res) => {
+  const { messages } = req.body;
+
+  if (messages && Array.isArray(messages)) {
+    const message = await messagesService.sendBatch(req.body);
+    if (message.status == "success") {
+      res.status(200).json(message);
+    } else if (message.status == "fail") {
+      res.status(400).json(message);
+    } else {
+      res.status(500).json({
+        status: "fail",
+        message: "Unknown error while trying to send message batch!",
+      });
+    }
+  } else {
+    res.status(400).json({
+      status: "fail",
+      message: "You should provide an array containing valid FCM Messages",
+    });
+  }
+};
+
+exports.sentToSingleDevice = async (req, res) => {
+  const { title, body, token } = req.body;
+  if (!token || !title || !body) {
+    res.status(400).json({
+      status: "fail",
+      message: "Missing fields, title, body, email and source must be provided",
+    });
+  } else {
+    const message = await messagesService.sentToSingleDevice(req.body);
+    if (message.status == "success") {
+      res.status(200).json(message);
+    } else if (message.status == "fail") {
+      res.status(400).json(message);
+    } else {
+      res.status(500).json({
+        status: "fail",
+        message: "Unknown error while trying to send message to single device!",
+      });
+    }
+  }
+};
