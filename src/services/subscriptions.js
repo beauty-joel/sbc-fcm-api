@@ -151,32 +151,3 @@ exports.unsubscribeFromTopic = async (requestBody) => {
     message: "Unsubscribed from topic!",
   };
 };
-
-// exports.unsubscribeFromTopic = async (req, res) => {
-
-//   // TODO add validation for already unsubscribed
-
-//   if (accountExists && topicExists) {
-//     const deviceTokensRef = db.collection("deviceTokens").doc(email);
-//     const deviceTokensDoc = await deviceTokensRef.get();
-//     const { [sourceField]: tokens, ...theRest } = deviceTokensDoc.data();
-//     try {
-//       await getMessaging().unsubscribeFromTopic(tokens, topic);
-//       removeTopicFromTokenDetails(tokens, topic);
-//       res.status(200).json({
-//         status: "success",
-//         message: `Successfully unsubscribed from topic:', ${topic}`,
-//       });
-//     } catch (error) {
-//       res.status(501).json({
-//         status: "fail",
-//         message: `Error unsubscribing from topic:', ${error}`,
-//       });
-//     }
-//   } else {
-//     res.status(404).json({
-//       status: "fail",
-//       message: "Account or topic not found:",
-//     });
-//   }
-// };
