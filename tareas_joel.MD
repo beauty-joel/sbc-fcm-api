@@ -1,0 +1,18 @@
+- Definición de estructura de las colecciones en Firestore
+- App móvil de prueba para generar tokens y recibir notificaciones
+- End points para registrar / eliminar tokens
+- End point para subscribir / o cancelar subscripción a un ‘topic’
+- End point para enviar mensajes a una sola cuenta
+- End point para enviar mensajes a varias cuentas
+- End point para enviar mensajes a un ‘topic’
+- End point para enviar mensaje a un token
+- Endpoint para enviar mensaje a un grupo de tokens
+- Endpoint para enviar un batch de mensajes
+- Creación de pruebas unitarias a nivel controlador
+- Refactorización de código para incluir una capa de servicios
+- Refactorización de código mejores practicas de Firestore
+  - Uso de ‘transactions’ para la escritura de varias colecciones
+  - Uso de ‘FieldValue.increase’ para contadores
+- Dockerizacion de la api
+- Integracion con order commissions
+- Creación de worker para RabbitMQ

@@ -56,7 +56,7 @@ exports.sendToTopic = async (req, res) => {
       message: "Missing fields, title, body, email and source must be provided",
     });
   } else {
-    const message = await messagesService.sendToToken(req.body);
+    const message = await messagesService.sendToTopic(req.body);
     if (message.status == "success") {
       res.status(200).json(message);
     } else if (message.status == "fail") {

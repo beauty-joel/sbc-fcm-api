@@ -127,7 +127,7 @@ exports.sendToSingleAccount = async (requestBody) => {
   }
 };
 
-exports.sendToToken = async (requestBody) => {
+exports.sendToTopic = async (requestBody) => {
   const { topic, title, body } = requestBody;
 
   const message = {
@@ -140,7 +140,7 @@ exports.sendToToken = async (requestBody) => {
 
   try {
     const topicReference = db.collection("topics").doc(topic);
-    const topicDocument = await db.get(topicReference);
+    const topicDocument = await topicReference.get();
 
     if (topicDocument.exists) {
       await getMessaging().send(message);
@@ -152,7 +152,7 @@ exports.sendToToken = async (requestBody) => {
         message: `Successfully sent message to topic: ${topic}`,
       };
     } else {
-      throw new Error(`Topic "${accounts[i]}" not found!`);
+      throw new Error(`Topic "${topic}" not found!`);
     }
   } catch (error) {
     console.log(error);

@@ -4,16 +4,16 @@ exports.saveToken = async (req, res) => {
   const { email, token, deviceType, source } = req.body;
 
   if (!email || !token || !deviceType || !source) {
-    res.status(400).json({
+    res.status(422).json({
       status: "fail",
       message: "Missing fields",
     });
   } else {
     const tokenResponse = await tokenServices.saveToken(req.body);
     if (tokenResponse.status == "fail") {
-      res.status(500).json({
+      res.status(422).json({
         status: "fail",
-        message: `Error: ${tokenResponse.message}`,
+        message: `${tokenResponse.message}`,
       });
     } else {
       res.status(200).json({
