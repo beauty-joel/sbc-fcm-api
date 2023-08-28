@@ -33,7 +33,7 @@ describe("when calling the token controller", () => {
     await TokenController.saveToken(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
-      message: "Token successfully saved",
+      message: "Token saved!",
       status: "success",
     });
   });
@@ -51,9 +51,9 @@ describe("when calling the token controller", () => {
       },
     };
     await TokenController.deleteToken(req, res);
-    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
-      message: `Token '${req.body.token}' not found!`,
+      message: `Error: Token '${req.body.token}' not found!`,
       status: "fail",
     });
   });

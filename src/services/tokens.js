@@ -75,7 +75,6 @@ exports.saveToken = async (requestBody) => {
         });
       }
     });
-    console.log("Transaction success!");
     return {
       status: "success",
       message: "Token saved correctly",
@@ -149,7 +148,7 @@ exports.deleteToken = async (requestBody) => {
         }
         transaction.delete(tokenReference);
       } else {
-        throw new Error("Token is not valid!");
+        throw new Error(`Token '${token}' not found!`);
       }
     });
   } catch (error) {

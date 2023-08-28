@@ -3,7 +3,6 @@ const express = require("express");
 
 const tokensRoutes = require("./src/routes/tokens");
 const messagesRoutes = require("./src/routes/messages");
-const subscriptionRoutes = require("./src/routes/subscription");
 
 // Server
 const app = express();
@@ -19,8 +18,5 @@ if (process.env.NODE_ENV === "development") {
 // Routes
 app.use("/sbc-fcm-api/v1/tokens", tokensRoutes);
 app.use("/sbc-fcm-api/v1/messages", messagesRoutes);
-app.use("/sbc-fcm-api/v1/subscriptions", subscriptionRoutes);
-// TODO
-// app.use("/sbc-fcm-api/v1/topics", topicsRoutes);
 
 module.exports = app;

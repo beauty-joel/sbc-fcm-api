@@ -39,7 +39,7 @@ exports.deleteToken = async (req, res) => {
     if (tokenResponse.status == "fail") {
       res.status(400).json({
         status: "fail",
-        message: `Error: ${tokenResponse.message}`,
+        message: `${tokenResponse.message}`,
       });
     } else if (tokenResponse.status == "success") {
       res.status(204).json();
